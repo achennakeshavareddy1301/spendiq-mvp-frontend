@@ -1,73 +1,123 @@
-# Welcome to your Lovable project
+<div align="center">
 
-## Project info
+# 💰 SpendIQ
 
-**URL**: https://lovable.dev/projects/746b42a7-1c4e-418d-81d8-3717d5d08593
+### Transform Your UPI Statements Into Actionable Financial Insights
 
-## How can I edit this code?
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-11.1-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Gemini AI](https://img.shields.io/badge/Gemini_AI-2.0-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Made in India](https://img.shields.io/badge/Made_in-India-FF9933?style=for-the-badge)](https://en.wikipedia.org/wiki/India)
 
-There are several ways of editing your application.
+<p align="center">
+  <strong>🇮🇳 Built for Indian Users | 🤖 Powered by AI | 📊 Beautiful Charts | 📄 PDF Reports</strong>
+</p>
 
-**Use Lovable**
+[Live Demo](https://port-9867d.web.app) • [Report Bug](https://github.com/achennakeshavareddy1301/spendiq-mvp-frontend/issues) • [Request Feature](https://github.com/achennakeshavareddy1301/spendiq-mvp-frontend/issues)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/746b42a7-1c4e-418d-81d8-3717d5d08593) and start prompting.
+</div>
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## ✨ Features
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+<table>
+<tr>
+<td width="50%">
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🤖 AI-Powered Analysis
+Leverages **Google Gemini 2.0 Flash** to intelligently extract transactions and provide personalized financial insights tailored to Indian spending patterns.
 
-Follow these steps:
+</td>
+<td width="50%">
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 📊 Interactive Charts
+Beautiful visualizations with **Recharts**:
+- 🥧 **Pie Chart** - Category breakdown
+- 📊 **Bar Chart** - Monthly comparison
+- 📈 **Line Chart** - Income vs Expense trends
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+</td>
+</tr>
+<tr>
+<td width="50%">
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 📄 PDF Export
+Generate professional financial reports with **jsPDF**. Download and share your analysis with detailed breakdowns, charts data, and AI suggestions.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+</td>
+<td width="50%">
 
-**Edit a file directly in GitHub**
+### 🔐 Secure Authentication
+**Firebase Auth** with email/password. Your financial data stays private with Firestore security rules protecting user-specific data.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+</td>
+</tr>
+<tr>
+<td width="50%">
 
-**Use GitHub Codespaces**
+### 📱 Responsive Design
+Mobile-first design with **Tailwind CSS** and **shadcn/ui**. Works seamlessly on phones, tablets, and desktops.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+</td>
+<td width="50%">
 
-## What technologies are used for this project?
+### 🇮🇳 Indian Context
+Built specifically for Indian users with support for:
+- Paytm, PhonePe, Google Pay statements
+- Swiggy, Zomato, Amazon India merchants
+- ₹ currency formatting with lakhs/crores
 
-This project is built with:
+</td>
+</tr>
+</table>
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/746b42a7-1c4e-418d-81d8-3717d5d08593) and click on Share -> Publish.
 
-## Can I connect a custom domain to my Lovable project?
 
-Yes, you can!
+## 🛠️ Tech Stack
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+| Category | Technologies |
+|----------|-------------|
+| **Frontend** | React 18, TypeScript, Vite, React Router |
+| **Styling** | Tailwind CSS, shadcn/ui, Lucide Icons |
+| **AI/ML** | Google Gemini 2.0 Flash API |
+| **Backend** | Firebase Auth, Cloud Firestore |
+| **Charts** | Recharts |
+| **PDF** | jsPDF, PDF.js |
+| **State** | React Query, React Context |
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js** 18+ and npm
+- **Firebase** account ([console.firebase.google.com](https://console.firebase.google.com))
+- **Gemini API Key** ([aistudio.google.com](https://aistudio.google.com/apikey))
+
+### Installation
+
+
+
+👨‍💻 Author
+A Chennakeshava Reddy
+
+<img src="https://img.shields.io/badge/GitHub-achennakeshavareddy1301-181717?style=for-the-badge&amp;logo=github" alt="GitHub">
+
+🙏 Acknowledgments
+Firebase - Backend & Authentication
+Google Gemini - AI/ML capabilities
+shadcn/ui - Beautiful UI components
+Recharts - Chart library
+Tailwind CSS - Styling
+Vite - Build tool
+⭐ Star this repo if you found it helpful!
+
+Made with ❤️ in India 🇮🇳
+
