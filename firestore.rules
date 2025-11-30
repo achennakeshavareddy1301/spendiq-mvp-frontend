@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - users can only read/write their own document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Analyses collection - users can only access their own analyses
+    match /analyses/{analysisId} {
+      // Allow read if user is authenticated and owns the document
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Allow create if user is authenticated (Cloud Functions handle this)
+      // In production, you might want to restrict this to Cloud Functions only
+      allow create: if request.auth != null;
+      
+      // Allow update only if user owns the document
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Allow delete only if user owns the document
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Transactions subcollection
+      match /transactions/{transactionId} {
+        allow read: if request.auth != null && 
+          get(/databases/$(database)/documents/analyses/$(analysisId)).data.userId == request.auth.uid;
+        allow write: if request.auth != null;
+      }
+    }
+  }
+}
