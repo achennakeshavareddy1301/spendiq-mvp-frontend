@@ -15,7 +15,7 @@
   <strong>🇮🇳 Built for Indian Users | 🤖 Powered by AI | 📊 Beautiful Charts | 📄 PDF Reports</strong>
 </p>
 
-[Live Demo](https://port-9867d.web.app) • [Report Bug](https://github.com/achennakeshavareddy1301/spendiq-mvp-frontend/issues) • [Request Feature](https://github.com/achennakeshavareddy1301/spendiq-mvp-frontend/issues)
+[Live Demo](https://spendiq-mvp-frontend.vercel.app/) • [Report Bug](https://github.com/achennakeshavareddy1301/spendiq-mvp-frontend/issues) • [Request Feature](https://github.com/achennakeshavareddy1301/spendiq-mvp-frontend/issues)
 
 </div>
 
