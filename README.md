@@ -101,7 +101,9 @@ Built specifically for Indian users with support for:
 - **Firebase** account ([console.firebase.google.com](https://console.firebase.google.com))
 - **Gemini API Key** ([aistudio.google.com](https://aistudio.google.com/apikey))
 
-### Installation
+### Flow chart
+
+![Uploading Gemini_Generated_Image_a5x6bra5x6bra5x6.png…]()
 
 
 
