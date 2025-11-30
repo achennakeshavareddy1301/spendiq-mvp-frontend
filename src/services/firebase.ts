@@ -22,6 +22,7 @@ import {
   getDocs,
   setDoc,
   addDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -221,6 +222,14 @@ export async function saveAnalysisToFirestore(
   // The transactions can be re-extracted from the PDF if needed
   
   return docRef.id;
+}
+
+/**
+ * Delete an analysis document from Firestore
+ */
+export async function deleteAnalysis(analysisId: string): Promise<void> {
+  const docRef = doc(db, "analyses", analysisId);
+  await deleteDoc(docRef);
 }
 
 // Export Firebase instances for direct use if needed

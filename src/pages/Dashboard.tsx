@@ -14,10 +14,16 @@ import {
   Clock,
   Loader2,
   ChevronRight,
-  LogOut
+  LogOut,
+  Trash2,
+  BarChart3,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeToUserAnalyses } from "@/services/firebase";
+import { subscribeToUserAnalyses, deleteAnalysis } from "@/services/firebase";
 import { AnalysisDocument } from "@/types";
 import AnalysisView from "@/components/AnalysisView";
 
@@ -28,6 +34,7 @@ export default function Dashboard(): JSX.Element {
   const [analyses, setAnalyses] = useState<AnalysisDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisDocument | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -58,6 +65,38 @@ export default function Dashboard(): JSX.Element {
       console.error("Logout failed:", error);
     }
   };
+
+  // Handle delete analysis
+  const handleDelete = async (e: React.MouseEvent, analysisId: string) => {
+    e.stopPropagation(); // Prevent card click
+    if (!confirm("Are you sure you want to delete this analysis?")) return;
+    
+    try {
+      setDeletingId(analysisId);
+      await deleteAnalysis(analysisId);
+      if (selectedAnalysis?.id === analysisId) {
+        setSelectedAnalysis(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete analysis:", error);
+      alert("Failed to delete analysis. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Calculate summary stats
+  const stats = analyses.reduce(
+    (acc, analysis) => {
+      if (analysis.status === "done" && analysis.result) {
+        acc.totalSpent += analysis.result.summary.totalSpent;
+        acc.totalReceived += analysis.result.summary.totalReceived;
+        acc.totalTransactions += analysis.result.summary.transactionCount;
+      }
+      return acc;
+    },
+    { totalSpent: 0, totalReceived: 0, totalTransactions: 0 }
+  );
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -120,9 +159,9 @@ export default function Dashboard(): JSX.Element {
       </nav>
 
       {/* Main Content */}
-      <div className="container mx-auto max-w-6xl pt-24 pb-12 px-4">
+      <div className="container mx-auto max-w-7xl pt-24 pb-12 px-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
@@ -130,12 +169,73 @@ export default function Dashboard(): JSX.Element {
             </p>
           </div>
           <Link to="/upi">
-            <Button variant="hero">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button variant="hero" size="lg">
+              <Plus className="h-5 w-5 mr-2" />
               New Analysis
             </Button>
           </Link>
         </div>
+
+        {/* Stats Cards */}
+        {!loading && analyses.length > 0 && !selectedAnalysis && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Analyses</p>
+                    <p className="text-3xl font-bold text-foreground">{analyses.length}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Spent</p>
+                    <p className="text-2xl font-bold text-red-500">{formatCurrency(stats.totalSpent)}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <ArrowDownRight className="h-6 w-6 text-red-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Received</p>
+                    <p className="text-2xl font-bold text-green-500">{formatCurrency(stats.totalReceived)}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <ArrowUpRight className="h-6 w-6 text-green-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Transactions</p>
+                    <p className="text-3xl font-bold text-blue-500">{stats.totalTransactions}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Wallet className="h-6 w-6 text-blue-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Selected Analysis View */}
         {selectedAnalysis && selectedAnalysis.result && (
@@ -144,15 +244,30 @@ export default function Dashboard(): JSX.Element {
               <h2 className="text-xl font-bold text-foreground">
                 Analysis: {selectedAnalysis.fileName}
               </h2>
-              <Button variant="outline" onClick={() => setSelectedAnalysis(null)}>
-                Close
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={(e) => handleDelete(e, selectedAnalysis.id)}
+                  disabled={deletingId === selectedAnalysis.id}
+                >
+                  {deletingId === selectedAnalysis.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Delete
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedAnalysis(null)}>
+                  Close
+                </Button>
+              </div>
             </div>
             <AnalysisView result={selectedAnalysis.result} />
           </div>
         )}
 
-        {/* Analyses List */}
+        {/* Analyses Grid */}
         {!selectedAnalysis && (
           <>
             {loading ? (
@@ -161,88 +276,138 @@ export default function Dashboard(): JSX.Element {
               </div>
             ) : analyses.length === 0 ? (
               <Card className="bg-card/50 backdrop-blur-sm border-border">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                    <FileText className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-foreground mb-2">
                     No analyses yet
                   </h3>
-                  <p className="text-muted-foreground mb-4 text-center">
-                    Upload your first UPI statement to get started with financial insights
+                  <p className="text-muted-foreground mb-6 text-center max-w-md">
+                    Upload your first UPI statement to get started with AI-powered financial insights
                   </p>
                   <Link to="/upi">
-                    <Button variant="hero">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Upload Statement
+                    <Button variant="hero" size="lg">
+                      <Plus className="h-5 w-5 mr-2" />
+                      Upload Your First Statement
                     </Button>
                   </Link>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {analyses.map((analysis) => (
                   <Card 
                     key={analysis.id} 
-                    className="bg-card/50 backdrop-blur-sm border-border hover:border-primary/30 transition-colors cursor-pointer"
+                    className="bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer group"
                     onClick={() => analysis.status === "done" && setSelectedAnalysis(analysis)}
                   >
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                             <FileText className="h-5 w-5 text-primary" />
-                            <h3 className="font-semibold text-foreground">
-                              {analysis.fileName}
-                            </h3>
-                            <Badge variant={getStatusVariant(analysis.status)}>
-                              {analysis.status}
-                            </Badge>
                           </div>
-                          
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              {formatDate(analysis.createdAt)}
-                            </span>
-                            
-                            {analysis.status === "done" && analysis.result && (
-                              <>
-                                <span className="flex items-center gap-1 text-destructive">
-                                  <TrendingDown className="h-4 w-4" />
-                                  {formatCurrency(analysis.result.summary.totalSpent)}
-                                </span>
-                                <span className={`flex items-center gap-1 ${
-                                  analysis.result.summary.netFlow >= 0 
-                                    ? 'text-primary' 
-                                    : 'text-destructive'
-                                }`}>
-                                  <TrendingUp className="h-4 w-4" />
-                                  Net: {formatCurrency(analysis.result.summary.netFlow)}
-                                </span>
-                                <span className="text-foreground">
-                                  {analysis.result.summary.transactionCount} transactions
-                                </span>
-                              </>
-                            )}
-                            
-                            {analysis.status === "processing" && (
-                              <span className="flex items-center gap-1">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Processing...
-                              </span>
-                            )}
-                            
-                            {analysis.status === "error" && analysis.error && (
-                              <span className="text-destructive">
-                                {analysis.error}
-                              </span>
-                            )}
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm font-medium truncate max-w-[120px]" title={analysis.fileName}>
+                              {analysis.fileName}
+                            </CardTitle>
+                            <CardDescription className="flex items-center gap-1 mt-1 text-xs">
+                              <Calendar className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{formatDate(analysis.createdAt)}</span>
+                            </CardDescription>
                           </div>
                         </div>
-                        
-                        {analysis.status === "done" && (
-                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                        )}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Badge variant={getStatusVariant(analysis.status)} className="capitalize text-xs px-2 py-0.5">
+                            {analysis.status}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => handleDelete(e, analysis.id)}
+                            disabled={deletingId === analysis.id}
+                          >
+                            {deletingId === analysis.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
+                    </CardHeader>
+                    
+                    <CardContent className="pt-0">
+                      {analysis.status === "done" && analysis.result && (
+                        <div className="space-y-4">
+                          {/* Financial Summary */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-red-500/10 rounded-lg p-3">
+                              <div className="flex items-center gap-2 text-red-500 mb-1">
+                                <ArrowDownRight className="h-4 w-4" />
+                                <span className="text-xs font-medium">Spent</span>
+                              </div>
+                              <p className="text-lg font-bold text-red-500">
+                                {formatCurrency(analysis.result.summary.totalSpent)}
+                              </p>
+                            </div>
+                            <div className="bg-green-500/10 rounded-lg p-3">
+                              <div className="flex items-center gap-2 text-green-500 mb-1">
+                                <ArrowUpRight className="h-4 w-4" />
+                                <span className="text-xs font-medium">Received</span>
+                              </div>
+                              <p className="text-lg font-bold text-green-500">
+                                {formatCurrency(analysis.result.summary.totalReceived)}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Net Flow & Transactions */}
+                          <div className="flex items-center justify-between text-sm border-t border-border/50 pt-3">
+                            <span className={`font-semibold flex items-center gap-1 ${
+                              analysis.result.summary.netFlow >= 0 
+                                ? 'text-green-500' 
+                                : 'text-red-500'
+                            }`}>
+                              {analysis.result.summary.netFlow >= 0 ? (
+                                <TrendingUp className="h-4 w-4" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4" />
+                              )}
+                              Net: {formatCurrency(analysis.result.summary.netFlow)}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {analysis.result.summary.transactionCount} transactions
+                            </span>
+                          </div>
+                          
+                          {/* View Details Button */}
+                          <Button 
+                            variant="outline" 
+                            className="w-full group-hover:border-primary/50 group-hover:bg-primary/5 transition-colors"
+                          >
+                            View Full Analysis
+                            <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {analysis.status === "processing" && (
+                        <div className="flex flex-col items-center justify-center py-6">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                          <p className="text-sm text-muted-foreground">Analyzing your statement...</p>
+                        </div>
+                      )}
+                      
+                      {analysis.status === "error" && (
+                        <div className="bg-destructive/10 rounded-lg p-4">
+                          <p className="text-sm text-destructive">
+                            {analysis.error || "An error occurred during analysis"}
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
