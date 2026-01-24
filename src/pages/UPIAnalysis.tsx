@@ -14,6 +14,7 @@ import { processUPIStatement } from "@/services/gemini";
 import { saveAnalysisToFirestore } from "@/services/firebase";
 import { AnalysisResult, Transaction } from "@/types";
 import AnalysisView from "@/components/AnalysisView";
+import FloatingAdvisor from "@/components/FloatingAdvisor";
 
 type AnalysisStatus = "idle" | "extracting" | "analyzing" | "saving" | "done" | "error";
 
@@ -290,6 +291,11 @@ export default function UPIAnalysisPage(): JSX.Element {
             
             <AnalysisView result={analysis} />
           </div>
+        )}
+
+        {/* Floating Smart Financial Advisor Chat */}
+        {transactions.length > 0 && (
+          <FloatingAdvisor transactions={transactions} />
         )}
       </div>
     </div>

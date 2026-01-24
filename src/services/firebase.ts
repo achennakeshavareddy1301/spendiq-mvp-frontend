@@ -210,16 +210,13 @@ export async function saveAnalysisToFirestore(
     fileName,
     status: "done",
     transactionCount: transactions.length,
+    transactions, // Save transactions for AI chat feature
     result,
     createdAt: new Date().toISOString(),
     completedAt: new Date().toISOString()
   };
   
   const docRef = await addDoc(collection(db, "analyses"), analysisDoc);
-  
-  // Optionally save transactions as a subcollection
-  // For now, we'll skip this to keep it simple
-  // The transactions can be re-extracted from the PDF if needed
   
   return docRef.id;
 }

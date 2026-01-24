@@ -93,6 +93,7 @@ export interface AnalysisDocument {
   createdAt: string;
   completedAt?: string;
   transactionCount: number;
+  transactions?: Transaction[]; // Raw transactions for AI chat
   result?: AnalysisResult | null;
   error?: string | null;
 }

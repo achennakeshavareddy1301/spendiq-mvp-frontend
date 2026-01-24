@@ -12,7 +12,7 @@ if (!GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 /**
  * Extract transactions from PDF text using Gemini
@@ -214,4 +214,85 @@ export async function processUPIStatement(pdfText: string): Promise<{
   const analysis = await analyzeTransactions(transactions);
   
   return { transactions, analysis };
+}
+
+/**
+ * Chat session type for financial advisor
+ */
+export interface FinancialChatSession {
+  sendMessage: (message: string) => Promise<string>;
+}
+
+/**
+ * Start a financial advisor chat session with transaction context
+ * Uses Gemini's chat functionality to maintain conversation history
+ */
+export function startFinancialChat(transactions: Transaction[]): FinancialChatSession {
+  const systemPrompt = `You are SpendIQ's AI Financial Advisor - a friendly, knowledgeable, and data-driven personal finance expert. You have access to the user's complete transaction history and should provide personalized, actionable financial advice.
+
+PERSONALITY:
+- Be concise and friendly - use casual but professional language
+- Be data-driven - always reference specific numbers from their transactions
+- Be proactive - suggest insights they might not have thought to ask about
+- Use emojis sparingly to make responses engaging (1-2 per response max)
+- Format currency in Indian Rupees (₹)
+
+YOUR KNOWLEDGE BASE - User's Transaction Data:
+${JSON.stringify(transactions, null, 2)}
+
+CAPABILITIES:
+1. Analyze spending patterns by category, vendor, or time period
+2. Identify their highest and lowest expenses
+3. Compare spending across different categories
+4. Spot unusual or suspicious transactions
+5. Provide budgeting recommendations based on 50/30/20 rule
+6. Suggest savings opportunities based on their actual spending
+7. Track recurring subscriptions and suggest reviews
+8. Analyze food delivery, shopping, and entertainment habits
+9. Calculate daily/weekly/monthly spending averages
+10. Identify spending trends over time
+
+RESPONSE GUIDELINES:
+- Keep responses concise (2-4 sentences for simple queries, up to a paragraph for analysis)
+- Always include specific numbers and percentages from their data
+- If asked about something not in their data, politely explain what you can help with
+- Suggest follow-up questions to help them explore their finances deeper
+- Never make up data - only use what's in their transaction history
+
+EXAMPLE RESPONSES:
+- "Your top spending category is Food & Dining at ₹12,450 (28% of total). Swiggy alone accounts for ₹6,200! 🍕 Want me to break down your food spending by vendor?"
+- "You spent ₹3,200 on subscriptions this month. I noticed Netflix, Spotify, and Amazon Prime. Have you considered bundling services to save?"`;
+
+  // Initialize chat session with context in history (systemInstruction as Content object)
+  const chat = model.startChat({
+    history: [
+      {
+        role: "user",
+        parts: [{ text: systemPrompt + "\n\nPlease acknowledge that you understand and are ready to help." }],
+      },
+      {
+        role: "model",
+        parts: [{ text: "I'm ready to help you understand your finances! I've analyzed your transaction history and I'm here to answer any questions about your spending patterns, help identify savings opportunities, and provide personalized financial advice. What would you like to know? 💰" }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      topP: 0.8,
+      topK: 40,
+      maxOutputTokens: 1024,
+    },
+  });
+
+  return {
+    sendMessage: async (message: string): Promise<string> => {
+      try {
+        const result = await chat.sendMessage(message);
+        const response = result.response;
+        return response.text();
+      } catch (error) {
+        console.error("Chat error:", error);
+        throw new Error("Failed to get response from AI advisor. Please try again.");
+      }
+    },
+  };
 }

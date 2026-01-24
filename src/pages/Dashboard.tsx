@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserAnalyses, deleteAnalysis } from "@/services/firebase";
 import { AnalysisDocument } from "@/types";
 import AnalysisView from "@/components/AnalysisView";
+import FloatingAdvisor from "@/components/FloatingAdvisor";
 
 export default function Dashboard(): JSX.Element {
   const { user, logout } = useAuth();
@@ -265,6 +266,11 @@ export default function Dashboard(): JSX.Element {
             </div>
             <AnalysisView result={selectedAnalysis.result} />
           </div>
+        )}
+
+        {/* Floating Smart Financial Advisor Chat for selected analysis */}
+        {selectedAnalysis && selectedAnalysis.transactions && selectedAnalysis.transactions.length > 0 && (
+          <FloatingAdvisor transactions={selectedAnalysis.transactions} />
         )}
 
         {/* Analyses Grid */}
