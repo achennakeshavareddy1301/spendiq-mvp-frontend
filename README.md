@@ -102,8 +102,12 @@ Built specifically for Indian users with support for:
 - **Gemini API Key** ([aistudio.google.com](https://aistudio.google.com/apikey))
 
 ### Flow chart
+<img width="1879" height="932" alt="image" src="https://github.com/user-attachments/assets/63a4b3ee-6799-4c8f-9a6e-1c09cef8be79" />
 
-![Uploading Gemini_Generated_Image_a5x6bra5x6bra5x6.png…]()
+<img width="1882" height="931" alt="image" src="https://github.com/user-attachments/assets/64deb28d-2d36-4fd5-8872-948a778883fe" />
+
+<img width="498" height="930" alt="image" src="https://github.com/user-attachments/assets/5c57878a-3c72-4be7-8fb0-44d482c4e584" />
+
 
 
 
