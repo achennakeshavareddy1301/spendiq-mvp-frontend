@@ -26,6 +26,7 @@ export default function UPIAnalysisPage(): JSX.Element {
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +50,7 @@ export default function UPIAnalysisPage(): JSX.Element {
     
     setFile(f);
     setAnalysis(null);
+    setAnalysisId(null);
     setTransactions([]);
     setStatus("idle");
     setStatusMessage("");
@@ -85,7 +87,13 @@ export default function UPIAnalysisPage(): JSX.Element {
       setStatus("saving");
       setStatusMessage("Saving to your history...");
       try {
-        await saveAnalysisToFirestore(user.uid, file.name, result.transactions, result.analysis);
+        const savedId = await saveAnalysisToFirestore(
+          user.uid,
+          file.name,
+          result.transactions,
+          result.analysis
+        );
+        setAnalysisId(savedId);
       } catch (saveError) {
         // Non-critical error - analysis still succeeded
         console.warn("Could not save to history:", saveError);
@@ -108,6 +116,7 @@ export default function UPIAnalysisPage(): JSX.Element {
     setStatus("idle");
     setStatusMessage("");
     setAnalysis(null);
+    setAnalysisId(null);
     setTransactions([]);
     setError(null);
   }
@@ -289,7 +298,7 @@ export default function UPIAnalysisPage(): JSX.Element {
               Found {transactions.length} transactions
             </div>
             
-            <AnalysisView result={analysis} />
+            <AnalysisView result={analysis} analysisId={analysisId ?? undefined} />
           </div>
         )}
 

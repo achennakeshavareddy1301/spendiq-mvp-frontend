@@ -1,9 +1,18 @@
 // src/pages/Dashboard.tsx
 // Dashboard page showing all past analyses for the logged-in user
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -20,22 +29,88 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  Calendar
+  Calendar,
+  Sparkles,
+  Target,
+  PlusCircle,
+  Save,
+  XCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserAnalyses, deleteAnalysis } from "@/services/firebase";
-import { AnalysisDocument } from "@/types";
+import { AnalysisDocument, PortfolioSnapshotItem } from "@/types";
 import AnalysisView from "@/components/AnalysisView";
 import FloatingAdvisor from "@/components/FloatingAdvisor";
+import ScoreCard from "@/components/ScoreCard";
+import AdvisorChat from "@/components/AdvisorChat";
+import { calculateMoneyHealthScore } from "@/lib/financialScore";
+import { calculateFirePlan } from "@/lib/firePlanner";
 
 export default function Dashboard(): JSX.Element {
-  const { user, logout } = useAuth();
+  const { user, logout, profile, updateProfile } = useAuth();
   const navigate = useNavigate();
   
   const [analyses, setAnalyses] = useState<AnalysisDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisDocument | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [portfolioDraft, setPortfolioDraft] = useState<PortfolioSnapshotItem[]>([]);
+  const [savingPortfolio, setSavingPortfolio] = useState(false);
+
+  const latestAnalysis = useMemo(() => {
+    return analyses
+      .filter((analysis) => analysis.status === "done" && analysis.result)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  }, [analyses]);
+
+  const advisorInput = useMemo(() => {
+    if (!latestAnalysis?.result) return null;
+
+    const monthsCount = Math.max(1, latestAnalysis.result.monthlyTrend?.length ?? 1);
+    const monthlyIncomeFromData = latestAnalysis.result.summary.totalReceived / monthsCount;
+    const monthlyIncome = profile?.monthlyIncome && profile.monthlyIncome > 0
+      ? profile.monthlyIncome
+      : monthlyIncomeFromData;
+    const monthlyExpenses = latestAnalysis.result.summary.totalSpent / monthsCount;
+    const savings = Math.max(0, monthlyIncome - monthlyExpenses);
+    const debtEstimate = (latestAnalysis.result.categoryBreakdown || [])
+      .filter((category) => /emi|loan|debt/i.test(category.category))
+      .reduce((acc, category) => acc + category.amount, 0) / monthsCount;
+
+    const moneyHealth = calculateMoneyHealthScore({
+      monthlyIncome,
+      totalExpenses: monthlyExpenses,
+      categoryBreakdown: latestAnalysis.result.categoryBreakdown || [],
+      debt: debtEstimate,
+      savings,
+    });
+
+    const firePlan = calculateFirePlan({
+      age: profile?.age ?? 28,
+      monthlyIncome,
+      monthlyExpenses,
+      targetRetirementAge: 50,
+    });
+
+    return {
+      monthlyIncome,
+      monthlyExpenses,
+      savings,
+      debt: debtEstimate,
+      portfolioSnapshot: profile?.portfolioSnapshot ?? [],
+      analysis: latestAnalysis.result,
+      moneyHealth,
+      firePlan,
+    };
+  }, [latestAnalysis, profile]);
+
+  useEffect(() => {
+    if (profile?.portfolioSnapshot) {
+      setPortfolioDraft(profile.portfolioSnapshot);
+    } else {
+      setPortfolioDraft([]);
+    }
+  }, [profile?.portfolioSnapshot]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -132,6 +207,55 @@ export default function Dashboard(): JSX.Element {
         return "destructive";
       default:
         return "outline";
+    }
+  };
+
+  const handlePortfolioChange = (
+    index: number,
+    field: keyof PortfolioSnapshotItem,
+    value: string
+  ) => {
+    setPortfolioDraft((prev) =>
+      prev.map((item, idx) =>
+        idx === index
+          ? {
+              ...item,
+              [field]: field === "amount" ? Number(value) || 0 : value,
+            }
+          : item
+      )
+    );
+  };
+
+  const addPortfolioItem = () => {
+    setPortfolioDraft((prev) => [
+      ...prev,
+      { name: "", type: "mf", amount: 0 },
+    ]);
+  };
+
+  const removePortfolioItem = (index: number) => {
+    setPortfolioDraft((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleSavePortfolio = async () => {
+    if (!user) return;
+
+    const cleaned = portfolioDraft
+      .map((item) => ({
+        name: item.name.trim(),
+        type: item.type,
+        amount: Number(item.amount) || 0,
+      }))
+      .filter((item) => item.name && item.amount > 0);
+
+    try {
+      setSavingPortfolio(true);
+      await updateProfile({ portfolioSnapshot: cleaned });
+    } catch (error) {
+      console.error("Failed to save portfolio snapshot:", error);
+    } finally {
+      setSavingPortfolio(false);
     }
   };
 
@@ -238,6 +362,170 @@ export default function Dashboard(): JSX.Element {
           </div>
         )}
 
+        {/* AI Advisor + Highlights */}
+        {!selectedAnalysis && latestAnalysis?.result && advisorInput && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+            <ScoreCard
+              result={advisorInput.moneyHealth}
+              monthlyIncome={advisorInput.monthlyIncome}
+              monthlyExpenses={advisorInput.monthlyExpenses}
+              savings={advisorInput.savings}
+            />
+
+            <Card className="bg-card/60 backdrop-blur-sm border-border lg:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  AI Advisor Highlights
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Latest analysis from {latestAnalysis.fileName}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                    <p className="text-xs uppercase text-muted-foreground">Net Flow</p>
+                    <p className={`text-xl font-semibold ${
+                      latestAnalysis.result.summary.netFlow >= 0 ? "text-green-500" : "text-red-500"
+                    }`}>
+                      {formatCurrency(latestAnalysis.result.summary.netFlow)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                    <p className="text-xs uppercase text-muted-foreground">Top Category</p>
+                    <p className="text-xl font-semibold text-foreground">
+                      {latestAnalysis.result.categoryBreakdown?.[0]?.category || "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                    <Target className="h-4 w-4" />
+                    30-Day Mentor Playbook
+                  </div>
+                  <div className="space-y-3 text-sm text-foreground">
+                    {(latestAnalysis.result.suggestions || []).slice(0, 4).map((item, index) => (
+                      <div key={item} className="rounded-lg bg-secondary/40 px-3 py-2">
+                        <span className="text-xs uppercase text-muted-foreground mr-2">
+                          Week {index + 1}
+                        </span>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button variant="outline" onClick={() => setSelectedAnalysis(latestAnalysis)}>
+                  Open Full Analysis
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="lg:col-span-3">
+              <AdvisorChat advisorInput={advisorInput} />
+            </div>
+          </div>
+        )}
+
+        {!selectedAnalysis && (
+          <Card className="bg-card/60 backdrop-blur-sm border-border mb-10">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between text-foreground">
+                Portfolio Snapshot
+                <Button variant="outline" size="sm" onClick={addPortfolioItem}>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Add 2-5 holdings (MF/stocks). This stays private and personalizes advice.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {portfolioDraft.length === 0 && (
+                <div className="rounded-xl border border-dashed border-border/80 p-6 text-sm text-muted-foreground">
+                  Add your mutual funds, stocks, or ETFs to get portfolio-aware insights.
+                </div>
+              )}
+
+              {portfolioDraft.map((item, index) => (
+                <div key={`${item.name}-${index}`} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Holding</Label>
+                    <Input
+                      value={item.name}
+                      onChange={(event) =>
+                        handlePortfolioChange(index, "name", event.target.value)
+                      }
+                      placeholder="Axis Bluechip Fund / TCS"
+                      className="bg-background/60"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Type</Label>
+                    <Select
+                      value={item.type}
+                      onValueChange={(value) =>
+                        handlePortfolioChange(index, "type", value)
+                      }
+                    >
+                      <SelectTrigger className="bg-background/60">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mf">Mutual Fund</SelectItem>
+                        <SelectItem value="stock">Stock</SelectItem>
+                        <SelectItem value="etf">ETF</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Amount (INR)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={item.amount}
+                      onChange={(event) =>
+                        handlePortfolioChange(index, "amount", event.target.value)
+                      }
+                      placeholder="25000"
+                      className="bg-background/60"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePortfolioItem(index)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex justify-end">
+                <Button
+                  variant="hero"
+                  onClick={handleSavePortfolio}
+                  disabled={savingPortfolio}
+                >
+                  {savingPortfolio ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Save Snapshot
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Selected Analysis View */}
         {selectedAnalysis && selectedAnalysis.result && (
           <div className="mb-8">
@@ -264,7 +552,11 @@ export default function Dashboard(): JSX.Element {
                 </Button>
               </div>
             </div>
-            <AnalysisView result={selectedAnalysis.result} />
+            <AnalysisView
+              result={selectedAnalysis.result}
+              analysisId={selectedAnalysis.id}
+              advisorPlan={selectedAnalysis.advisorPlan ?? null}
+            />
           </div>
         )}
 

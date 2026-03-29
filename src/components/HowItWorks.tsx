@@ -1,36 +1,46 @@
-import { Upload, Sparkles, Tags, BarChart3, MessageSquare, TrendingUp } from "lucide-react";
+import { Upload, Sparkles, Tags, BarChart3, MessageSquare, TrendingUp, Gauge, Target } from "lucide-react";
 
 const HowItWorks = () => {
   const steps = [
     {
       icon: Upload,
-      title: "Upload your Paytm UPI statement",
-      description: "Simply drag and drop your CSV or PDF statement file.",
+      title: "Upload your UPI statement",
+      description: "Drop a PDF from Paytm, GPay, or PhonePe to begin.",
     },
     {
       icon: Sparkles,
-      title: "We clean and organize every transaction",
-      description: "Our system processes and structures your raw data automatically.",
+      title: "We clean and structure every transaction",
+      description: "SpendIQ extracts, standardizes, and verifies your raw data.",
     },
     {
       icon: Tags,
-      title: "AI auto-categorizes your spending",
-      description: "Smart algorithms tag each transaction to the right category.",
+      title: "AI auto-categorizes spends",
+      description: "Smart tagging across essentials, lifestyle, and discretionary spends.",
     },
     {
-      icon: BarChart3,
-      title: "Get a clear interactive dashboard",
-      description: "Visualize your spending patterns with intuitive charts.",
+      icon: Gauge,
+      title: "Get a Money Health Score",
+      description: "Understand if your cash flow is Healthy, Average, or Risky.",
+    },
+    {
+      icon: Target,
+      title: "See your FIRE plan",
+      description: "Retirement corpus, SIP targets, and years to independence.",
     },
     {
       icon: MessageSquare,
-      title: "Ask questions using the SpendIQ AI chat",
-      description: "Chat with your financial data to get instant answers.",
+      title: "Chat with your AI advisor",
+      description: "Ask questions and receive actionable rupee-level guidance.",
+    },
+    {
+      icon: BarChart3,
+      title: "Explore premium dashboards",
+      description: "Spend by vendor, category, and month in a clean fintech UI.",
     },
     {
       icon: TrendingUp,
-      title: "Get smart spending insights and trends",
-      description: "Receive actionable recommendations to optimize your finances.",
+      title: "Act on smart insights",
+      description: "Follow prioritized actions to reduce waste and grow savings.",
     },
   ];
 
@@ -51,7 +61,7 @@ const HowItWorks = () => {
         </div>
 
         {/* Steps Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {steps.map((step, index) => (
             <div
               key={index}

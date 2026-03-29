@@ -79,6 +79,7 @@ export interface AnalysisDocument {
   updatedAt: FirebaseFirestore.Timestamp | Date;
   transactionCount: number;
   result: AnalysisResult | null;
+  advisorPlan?: AdvisorPlan | null;
   error: string | null;
   rawText?: string;
 }
@@ -90,4 +91,71 @@ export interface AnalyzeUPIRequest {
   fileName: string;
   fileContent: string; // base64 encoded PDF
   mimeType: string;
+}
+
+export interface CategoryBreakdownItem {
+  category: string;
+  amount: number;
+  percentage: number;
+  transactionCount: number;
+}
+
+export interface MoneyHealthResult {
+  score: number;
+  label: "Healthy" | "Average" | "Risky";
+  insights: string[];
+}
+
+export interface FirePlanResult {
+  retirementCorpus: number;
+  monthlySipRequired: number;
+  yearsToFinancialIndependence: number;
+  targetRetirementAge: number;
+  assumedAnnualReturn: number;
+  assumedInflation: number;
+}
+
+export interface FinancialAdvisorInput {
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  savings: number;
+  debt?: number;
+  moneyHealth: MoneyHealthResult;
+  firePlan: FirePlanResult;
+  categoryBreakdown: CategoryBreakdownItem[];
+  portfolioSnapshot?: PortfolioSnapshotItem[];
+}
+
+export interface PortfolioSnapshotItem {
+  name: string;
+  type: "mf" | "stock" | "etf" | "other";
+  amount: number;
+}
+
+export interface AdvisorChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AnalyzeFinancialsRequest {
+  mode: "advice" | "chat";
+  input: FinancialAdvisorInput;
+  analysisId?: string;
+  history?: AdvisorChatMessage[];
+  question?: string;
+}
+
+export interface AdvisorPlan {
+  sipRecommendation: {
+    amount: number;
+    rationale: string;
+  };
+  savingsAdvice: string[];
+  taxSuggestions: string[];
+  riskProfile: {
+    label: "Conservative" | "Moderate" | "Aggressive";
+    rationale: string;
+  };
+  portfolioSuggestions: string[];
+  actionItems: string[];
 }

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Upload, Play, TrendingUp, Utensils, Home, ShoppingBag, Tv } from "lucide-react";
+import { Upload, Play, TrendingUp, Utensils, Home, ShoppingBag, Tv, Gauge, Target, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   const spendCategories = [
@@ -7,6 +8,21 @@ const HeroSection = () => {
     { icon: Home, label: "Rent", amount: "₹12,000", color: "bg-blue-500" },
     { icon: ShoppingBag, label: "Shopping", amount: "₹3,800", color: "bg-pink-500" },
     { icon: Tv, label: "Subscriptions", amount: "₹899", color: "bg-purple-500" },
+  ];
+
+  const chartBars = [
+    "h-[40%]",
+    "h-[65%]",
+    "h-[45%]",
+    "h-[80%]",
+    "h-[55%]",
+    "h-[90%]",
+    "h-[70%]",
+    "h-[60%]",
+    "h-[85%]",
+    "h-[50%]",
+    "h-[75%]",
+    "h-[95%]",
   ];
 
   return (
@@ -22,41 +38,60 @@ const HeroSection = () => {
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
               <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                AI Powered UPI Intelligence
-              </span>
+                  AI Personal Finance Mentor
+                </span>
             </div>
 
             {/* Headline */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
-              Turn UPI chaos into{" "}
-              <span className="text-gradient">financial clarity.</span>
+              Turn statements into{" "}
+              <span className="text-gradient">financial decisions.</span>
             </h1>
 
             {/* Subtext */}
             <p className="text-lg md:text-xl text-muted-foreground max-w-lg">
-              AI-powered UPI statement analysis for smarter spending.
+              SpendIQ converts your UPI transactions into a Money Health Score, FIRE plan, and AI-led action plan.
             </p>
+
+            <div className="flex flex-wrap gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm text-foreground">
+                <Gauge className="h-4 w-4 text-primary" />
+                Money Health Score
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm text-foreground">
+                <Target className="h-4 w-4 text-primary" />
+                FIRE Planner
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm text-foreground">
+                <Sparkles className="h-4 w-4 text-primary" />
+                AI Advisor Chat
+              </div>
+            </div>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="hero" size="lg" className="group">
-                <Upload className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" />
-                Upload UPI Statement
-              </Button>
-              <Button variant="hero-outline" size="lg" className="group">
-                <Play className="w-5 h-5 transition-transform group-hover:scale-110" />
-                View Demo
-              </Button>
+              <Link to="/auth">
+                <Button variant="hero" size="lg" className="group">
+                  <Upload className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" />
+                  Upload UPI Statement
+                </Button>
+              </Link>
+              <Link to="/dashboard">
+                <Button variant="hero-outline" size="lg" className="group">
+                  <Play className="w-5 h-5 transition-transform group-hover:scale-110" />
+                  View Demo
+                </Button>
+              </Link>
             </div>
 
             {/* Helper Text */}
             <p className="text-sm text-muted-foreground">
-              No spreadsheets. No manual tracking. Just upload your Paytm UPI statement.
+              No spreadsheets. No manual tracking. Just upload and let the advisor guide you.
             </p>
           </div>
 
           {/* Right Content - Dashboard Preview */}
-          <div className="relative animate-slide-up" style={{ animationDelay: "0.2s" }}>
+          <div className="relative animate-slide-up">
             <div className="relative bg-card rounded-2xl border border-border p-6 shadow-2xl">
               {/* Dashboard Header */}
               <div className="flex items-center justify-between mb-6">
@@ -66,11 +101,10 @@ const HeroSection = () => {
 
               {/* Fake Chart */}
               <div className="h-32 mb-6 flex items-end gap-2">
-                {[40, 65, 45, 80, 55, 90, 70, 60, 85, 50, 75, 95].map((height, i) => (
+                {chartBars.map((heightClass, i) => (
                   <div
                     key={i}
-                    className="flex-1 bg-gradient-to-t from-primary/80 to-primary rounded-t transition-all duration-300 hover:from-primary hover:to-accent"
-                    style={{ height: `${height}%` }}
+                    className={`flex-1 ${heightClass} bg-gradient-to-t from-primary/80 to-primary rounded-t transition-all duration-300 hover:from-primary hover:to-accent`}
                   />
                 ))}
               </div>
@@ -108,7 +142,7 @@ const HeroSection = () => {
 
             {/* Floating Elements */}
             <div className="absolute -top-4 -right-4 w-20 h-20 bg-primary/20 rounded-full blur-xl animate-float" />
-            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-accent/20 rounded-full blur-xl animate-float" style={{ animationDelay: "1s" }} />
+            <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-accent/20 rounded-full blur-xl animate-float" />
           </div>
         </div>
       </div>

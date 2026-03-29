@@ -11,9 +11,15 @@ import {
   Transaction, 
   AnalysisResult, 
   AnalyzeUPIRequest,
-  AnalysisDocument 
+  AnalysisDocument,
+  AnalyzeFinancialsRequest
 } from "./types";
-import { buildExtractionPrompt, buildAnalysisPrompt } from "./prompts";
+import {
+  buildExtractionPrompt,
+  buildAnalysisPrompt,
+  buildFinancialAdvicePrompt,
+  buildAdvisorChatPrompt
+} from "./prompts";
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -345,6 +351,109 @@ export const getAnalyses = functions.https.onRequest((req, res) => {
       res.status(error.code === "unauthenticated" ? 401 : 500).json({ 
         success: false, 
         error: error.message || "Internal server error" 
+      });
+    }
+  });
+});
+
+/**
+ * Analyze financials for AI advisor (server-side)
+ */
+export const analyzeFinancials = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, async () => {
+    try {
+      if (req.method !== "POST") {
+        res.status(405).json({ success: false, error: "Method not allowed" });
+        return;
+      }
+
+      const decodedToken = await verifyAuth(req);
+      const userId = decodedToken.uid;
+
+      if (!GEMINI_API_KEY) {
+        functions.logger.error("Gemini API key not configured");
+        res.status(500).json({ success: false, error: "Server configuration error" });
+        return;
+      }
+
+      const body = req.body as AnalyzeFinancialsRequest;
+      if (!body || !body.mode || !body.input) {
+        res.status(400).json({ success: false, error: "Missing request payload" });
+        return;
+      }
+
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      if (body.mode === "advice") {
+        const prompt = buildFinancialAdvicePrompt({
+          monthlyIncome: body.input.monthlyIncome,
+          monthlyExpenses: body.input.monthlyExpenses,
+          savings: body.input.savings,
+          debt: body.input.debt,
+          moneyHealth: body.input.moneyHealth,
+          firePlan: body.input.firePlan,
+          categoryBreakdown: body.input.categoryBreakdown || [],
+          portfolioSnapshot: body.input.portfolioSnapshot || [],
+        });
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        const advice = parseGeminiJson(responseText);
+
+        if (body.analysisId) {
+          const analysisRef = db.collection("analyses").doc(body.analysisId);
+          const analysisSnap = await analysisRef.get();
+
+          if (analysisSnap.exists) {
+            const data = analysisSnap.data() as AnalysisDocument;
+            if (data.userId === userId) {
+              await analysisRef.set(
+                {
+                  advisorPlan: advice,
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                },
+                { merge: true }
+              );
+            }
+          }
+        }
+
+        res.json({ success: true, advice });
+        return;
+      }
+
+      if (body.mode === "chat") {
+        const historyLines = (body.history || [])
+          .slice(-6)
+          .map((message) => `${message.role === "user" ? "User" : "Advisor"}: ${message.content}`);
+
+        const prompt = buildAdvisorChatPrompt({
+          monthlyIncome: body.input.monthlyIncome,
+          monthlyExpenses: body.input.monthlyExpenses,
+          savings: body.input.savings,
+          debt: body.input.debt,
+          moneyHealth: body.input.moneyHealth,
+          firePlan: body.input.firePlan,
+          categoryBreakdown: body.input.categoryBreakdown || [],
+          portfolioSnapshot: body.input.portfolioSnapshot || [],
+          history: historyLines,
+          question: body.question || "",
+        });
+
+        const result = await model.generateContent(prompt);
+        const reply = result.response.text().trim();
+
+        res.json({ success: true, reply });
+        return;
+      }
+
+      res.status(400).json({ success: false, error: "Invalid mode" });
+    } catch (error: any) {
+      functions.logger.error("analyzeFinancials error:", error);
+      res.status(error.code === "unauthenticated" ? 401 : 500).json({
+        success: false,
+        error: error.message || "Internal server error"
       });
     }
   });

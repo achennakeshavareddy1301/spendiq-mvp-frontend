@@ -16,6 +16,8 @@ const Auth = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    age: "",
+    monthlyIncome: "",
     email: "",
     password: "",
   });
@@ -38,7 +40,16 @@ const Auth = () => {
     
     try {
       if (isSignUp) {
-        await register(formData.email, formData.password, formData.name);
+        const ageValue = Number(formData.age);
+        const incomeValue = Number(formData.monthlyIncome);
+
+        await register(
+          formData.email,
+          formData.password,
+          formData.name,
+          Number.isFinite(ageValue) ? ageValue : undefined,
+          Number.isFinite(incomeValue) ? incomeValue : undefined
+        );
       } else {
         await login(formData.email, formData.password);
       }
@@ -110,24 +121,62 @@ const Auth = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name Field (Sign Up only) */}
               {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-foreground">
-                    Full Name
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="pl-10 bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
-                      required
-                    />
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-foreground">
+                      Full Name
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="name"
+                        name="name"
+                        type="text"
+                        placeholder="John Doe"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className="pl-10 bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="age" className="text-foreground">
+                        Age
+                      </Label>
+                      <Input
+                        id="age"
+                        name="age"
+                        type="number"
+                        min={18}
+                        max={75}
+                        placeholder="28"
+                        value={formData.age}
+                        onChange={handleInputChange}
+                        className="bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="monthlyIncome" className="text-foreground">
+                        Monthly Income (INR)
+                      </Label>
+                      <Input
+                        id="monthlyIncome"
+                        name="monthlyIncome"
+                        type="number"
+                        min={0}
+                        placeholder="65000"
+                        value={formData.monthlyIncome}
+                        onChange={handleInputChange}
+                        className="bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* Email Field */}

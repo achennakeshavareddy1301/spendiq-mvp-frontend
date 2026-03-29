@@ -1,10 +1,12 @@
 // src/components/AnalysisView.tsx
 // Component for displaying UPI analysis results with charts and PDF export
 
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -16,7 +18,10 @@ import {
   PieChart as PieChartIcon,
   Download,
   BarChart3,
-  LineChart as LineChartIcon
+  LineChart as LineChartIcon,
+  Sparkles,
+  ShieldCheck,
+  PiggyBank
 } from "lucide-react";
 import { 
   PieChart, 
@@ -36,9 +41,20 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { AnalysisResult } from "@/types";
+import ScoreCard from "@/components/ScoreCard";
+import AdvisorChat from "@/components/AdvisorChat";
+import { calculateMoneyHealthScore } from "@/lib/financialScore";
+import { calculateFirePlan } from "@/lib/firePlanner";
+import { generateFinancialAdvice } from "@/services/aiAdvisor";
+import type { AdvisorResponse } from "@/services/aiAdvisor";
+import { useAuth } from "@/contexts/AuthContext";
+
+const LazyFireChart = lazy(() => import("@/components/FireChart"));
 
 interface AnalysisViewProps {
   result: AnalysisResult;
+  analysisId?: string;
+  advisorPlan?: AdvisorResponse | null;
 }
 
 // Color palette for charts
@@ -57,9 +73,157 @@ const CHART_COLORS = [
   "#a855f7", // purple
 ];
 
-export default function AnalysisView({ result }: AnalysisViewProps) {
+const CHART_TEXT_CLASSES = [
+  "text-emerald-500",
+  "text-blue-500",
+  "text-amber-500",
+  "text-red-500",
+  "text-violet-500",
+  "text-pink-500",
+  "text-teal-500",
+  "text-orange-500",
+  "text-indigo-500",
+  "text-lime-500",
+  "text-cyan-500",
+  "text-fuchsia-500",
+];
+
+const CHART_DOT_CLASSES = [
+  "bg-emerald-500",
+  "bg-blue-500",
+  "bg-amber-500",
+  "bg-red-500",
+  "bg-violet-500",
+  "bg-pink-500",
+  "bg-teal-500",
+  "bg-orange-500",
+  "bg-indigo-500",
+  "bg-lime-500",
+  "bg-cyan-500",
+  "bg-fuchsia-500",
+];
+
+export default function AnalysisView({ result, analysisId, advisorPlan }: AnalysisViewProps) {
   const { summary, categoryBreakdown, topVendors, monthlyTrend, suspiciousTransactions, suggestions } = result;
   const analysisRef = useRef<HTMLDivElement>(null);
+  const { profile } = useAuth();
+  const [advisorResponse, setAdvisorResponse] = useState<AdvisorResponse | null>(null);
+  const [advisorLoading, setAdvisorLoading] = useState(false);
+  const [advisorError, setAdvisorError] = useState<string | null>(null);
+  const [userAge, setUserAge] = useState(profile?.age ?? 28);
+  const [targetAge, setTargetAge] = useState(50);
+
+  const normalizeAge = (value: number, min: number, max: number) =>
+    Math.min(max, Math.max(min, Math.round(value)));
+
+  const getChartTextClass = (color: string) => {
+    const index = CHART_COLORS.indexOf(color);
+    return CHART_TEXT_CLASSES[index] || "text-primary";
+  };
+
+  const getChartDotClass = (color: string) => {
+    const index = CHART_COLORS.indexOf(color);
+    return CHART_DOT_CLASSES[index] || "bg-primary";
+  };
+
+  useEffect(() => {
+    if (profile?.age) {
+      setUserAge(profile.age);
+    }
+  }, [profile?.age]);
+
+  useEffect(() => {
+    if (advisorPlan && !advisorResponse) {
+      setAdvisorResponse(advisorPlan);
+    }
+  }, [advisorPlan, advisorResponse]);
+
+
+  const monthsCount = Math.max(1, monthlyTrend?.length ?? 1);
+  const monthlyIncomeFromData = summary.totalReceived / monthsCount;
+  const monthlyIncome = profile?.monthlyIncome && profile.monthlyIncome > 0
+    ? profile.monthlyIncome
+    : monthlyIncomeFromData;
+  const monthlyExpenses = summary.totalSpent / monthsCount;
+  const savings = Math.max(0, monthlyIncome - monthlyExpenses);
+  const debtEstimate = (categoryBreakdown || [])
+    .filter((category) => /emi|loan|debt/i.test(category.category))
+    .reduce((acc, category) => acc + category.amount, 0) / monthsCount;
+
+  const moneyHealth = useMemo(
+    () =>
+      calculateMoneyHealthScore({
+        monthlyIncome,
+        totalExpenses: monthlyExpenses,
+        categoryBreakdown: categoryBreakdown || [],
+        debt: debtEstimate,
+        savings,
+      }),
+    [monthlyIncome, monthlyExpenses, categoryBreakdown, debtEstimate, savings]
+  );
+
+  const firePlan = useMemo(
+    () =>
+      calculateFirePlan({
+        age: userAge,
+        monthlyIncome,
+        monthlyExpenses,
+        targetRetirementAge: targetAge,
+      }),
+    [userAge, targetAge, monthlyIncome, monthlyExpenses]
+  );
+
+  const advisorInput = useMemo(
+    () => ({
+      monthlyIncome,
+      monthlyExpenses,
+      savings,
+      debt: debtEstimate,
+      portfolioSnapshot: profile?.portfolioSnapshot ?? [],
+      analysis: result,
+      moneyHealth,
+      firePlan,
+    }),
+    [monthlyIncome, monthlyExpenses, savings, debtEstimate, result, moneyHealth, firePlan, profile?.portfolioSnapshot]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (advisorPlan || advisorResponse) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    if (monthlyIncome <= 0 || monthlyExpenses <= 0) {
+      return;
+    }
+
+    setAdvisorLoading(true);
+    setAdvisorError(null);
+
+    generateFinancialAdvice(advisorInput, analysisId)
+      .then((response) => {
+        if (isMounted) {
+          setAdvisorResponse(response);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setAdvisorError(error instanceof Error ? error.message : "Unable to generate advice");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setAdvisorLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [advisorInput, monthlyIncome, monthlyExpenses, analysisId]);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -69,6 +233,9 @@ export default function AnalysisView({ result }: AnalysisViewProps) {
       minimumFractionDigits: 0,
     }).format(Math.abs(amount));
   };
+
+  const portfolioSnapshot = profile?.portfolioSnapshot ?? [];
+  const portfolioTotal = portfolioSnapshot.reduce((acc, item) => acc + item.amount, 0);
 
   // Format currency for PDF (without symbol issues)
   const formatCurrencyPDF = (amount: number) => {
@@ -105,13 +272,13 @@ export default function AnalysisView({ result }: AnalysisViewProps) {
   })) || [];
 
   // Custom tooltip for charts
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ color: string; name: string; value: number }>; label?: string }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium text-foreground">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
+          {payload.map((entry, index) => (
+            <p key={index} className={`text-sm ${getChartTextClass(entry.color)}`}>
               {entry.name}: {formatCurrency(entry.value)}
             </p>
           ))}
@@ -368,6 +535,264 @@ export default function AnalysisView({ result }: AnalysisViewProps) {
         </Button>
       </div>
 
+      {/* Money Health and AI Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <ScoreCard
+          result={moneyHealth}
+          monthlyIncome={monthlyIncome}
+          monthlyExpenses={monthlyExpenses}
+          savings={savings}
+        />
+
+        <Card className="bg-card/60 backdrop-blur-sm border-border lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Insights
+              <Badge variant="secondary" className="ml-auto text-xs">
+                Actionable
+              </Badge>
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Personalized recommendations based on your real spending data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {advisorLoading && (
+              <div className="space-y-3">
+                <div className="h-4 w-3/4 rounded bg-muted/40 animate-pulse" />
+                <div className="h-4 w-full rounded bg-muted/40 animate-pulse" />
+                <div className="h-4 w-5/6 rounded bg-muted/40 animate-pulse" />
+              </div>
+            )}
+
+            {advisorError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                {advisorError}
+              </div>
+            )}
+
+            {advisorResponse && !advisorLoading && !advisorError && (
+              <div className="grid gap-4">
+                <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Recommended SIP</p>
+                      <p className="text-2xl font-semibold text-foreground">
+                        {formatCurrency(advisorResponse.sipRecommendation.amount)} / month
+                      </p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <PiggyBank className="h-5 w-5 text-primary" />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {advisorResponse.sipRecommendation.rationale}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {advisorResponse.actionItems.slice(0, 4).map((item, index) => (
+                    <div
+                      key={item}
+                      className="rounded-xl border border-border/60 bg-background/60 p-3 text-sm text-foreground"
+                    >
+                      <span className="mr-2 text-xs text-primary">{index + 1}.</span>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* FIRE Planner and Portfolio Suggestions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="bg-card/60 backdrop-blur-sm border-border lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              FIRE Planner
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Targeting financial independence by age {firePlan.targetRetirementAge}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="advisor-age" className="text-xs text-muted-foreground">
+                  Current Age
+                </Label>
+                <Input
+                  id="advisor-age"
+                  type="number"
+                  min={18}
+                  max={65}
+                  value={userAge}
+                  onChange={(event) => {
+                    const nextAge = normalizeAge(Number(event.target.value) || 18, 18, 65);
+                    setUserAge(nextAge);
+                    if (targetAge <= nextAge) {
+                      setTargetAge(nextAge + 1);
+                    }
+                  }}
+                  className="bg-background/60"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="advisor-retire" className="text-xs text-muted-foreground">
+                  Target Retirement Age
+                </Label>
+                <Input
+                  id="advisor-retire"
+                  type="number"
+                  min={Math.max(22, userAge + 1)}
+                  max={75}
+                  value={targetAge}
+                  onChange={(event) => {
+                    const nextTarget = normalizeAge(
+                      Number(event.target.value) || userAge + 1,
+                      Math.max(22, userAge + 1),
+                      75
+                    );
+                    setTargetAge(nextTarget);
+                  }}
+                  className="bg-background/60"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                <p className="text-xs uppercase text-muted-foreground">Retirement Corpus</p>
+                <p className="text-xl font-semibold text-foreground">
+                  {formatCurrency(firePlan.retirementCorpus)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                <p className="text-xs uppercase text-muted-foreground">Monthly SIP Needed</p>
+                <p className="text-xl font-semibold text-foreground">
+                  {formatCurrency(firePlan.monthlySipRequired)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                <p className="text-xs uppercase text-muted-foreground">Years to FI</p>
+                <p className="text-xl font-semibold text-foreground">
+                  {firePlan.yearsToFinancialIndependence} years
+                </p>
+              </div>
+            </div>
+
+            <div className="h-[260px]">
+              <Suspense
+                fallback={<div className="h-full w-full rounded-xl bg-muted/30 animate-pulse" />}
+              >
+                <LazyFireChart firePlan={firePlan} currentAge={userAge} />
+              </Suspense>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Assumptions: 10% annual return, 6% inflation, age {userAge}, target age {firePlan.targetRetirementAge}.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/60 backdrop-blur-sm border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Lightbulb className="h-5 w-5 text-primary" />
+              Portfolio Suggestions
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Balanced allocation ideas based on your profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {advisorLoading && (
+              <div className="space-y-2">
+                <div className="h-3 w-full rounded bg-muted/40 animate-pulse" />
+                <div className="h-3 w-5/6 rounded bg-muted/40 animate-pulse" />
+                <div className="h-3 w-3/4 rounded bg-muted/40 animate-pulse" />
+              </div>
+            )}
+
+            {advisorResponse && !advisorLoading && (
+              <div className="space-y-2 text-sm text-foreground">
+                {advisorResponse.portfolioSuggestions.map((suggestion) => (
+                  <div
+                    key={suggestion}
+                    className="rounded-lg border border-border/60 bg-background/60 p-3"
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!advisorLoading && !advisorResponse && !advisorError && (
+              <div className="text-sm text-muted-foreground">
+                Upload more statements to unlock personalized portfolio guidance.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="bg-card/60 backdrop-blur-sm border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            Portfolio Overview
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Snapshot of your current mutual funds and stock holdings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {portfolioSnapshot.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
+              Add your MF and stock holdings in the Portfolio Snapshot on the dashboard to see them here.
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between rounded-xl border border-border/60 bg-background/60 p-4">
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Total Portfolio Value</p>
+                  <p className="text-2xl font-semibold text-foreground">
+                    {formatCurrency(portfolioTotal)}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {portfolioSnapshot.length} holdings
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {portfolioSnapshot.map((item) => (
+                  <div key={`${item.name}-${item.type}`} className="rounded-xl border border-border/60 bg-background/60 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{item.name}</p>
+                        <p className="text-xs text-muted-foreground uppercase">{item.type}</p>
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {formatCurrency(item.amount)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Advisor Chat */}
+      <AdvisorChat advisorInput={advisorInput} analysisId={analysisId} />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Spent */}
@@ -477,10 +902,7 @@ export default function AnalysisView({ result }: AnalysisViewProps) {
               <div className="flex flex-wrap gap-2 mt-4 justify-center">
                 {pieChartData.map((cat, index) => (
                   <div key={cat.name} className="flex items-center gap-1 text-xs">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: cat.color }}
-                    />
+                    <div className={`w-3 h-3 rounded-full ${getChartDotClass(cat.color)}`} />
                     <span className="text-muted-foreground">{cat.name}</span>
                   </div>
                 ))}

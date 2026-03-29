@@ -29,7 +29,7 @@ import {
   onSnapshot,
   Unsubscribe
 } from "firebase/firestore";
-import { AnalysisDocument, UserDocument, Transaction, AnalysisResult } from "@/types";
+import { AnalysisDocument, UserDocument, Transaction, AnalysisResult, AdvisorPlan } from "@/types";
 
 // Firebase configuration
 // These are public keys and safe to include in frontend code
@@ -67,19 +67,50 @@ export async function signIn(email: string, password: string): Promise<User> {
 /**
  * Sign up with email and password
  */
-export async function signUp(email: string, password: string, displayName?: string): Promise<User> {
+export async function signUp(
+  email: string,
+  password: string,
+  displayName?: string,
+  age?: number,
+  monthlyIncome?: number
+): Promise<User> {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   
   // Create user document in Firestore
   const userDoc: UserDocument = {
     email: credential.user.email || email,
     displayName: displayName || null,
+    age: typeof age === "number" ? age : null,
+    monthlyIncome: typeof monthlyIncome === "number" ? monthlyIncome : null,
     createdAt: new Date().toISOString()
   };
   
   await setDoc(doc(db, "users", credential.user.uid), userDoc);
   
   return credential.user;
+}
+
+/**
+ * Fetch user profile document
+ */
+export async function fetchUserProfile(userId: string): Promise<UserDocument | null> {
+  const docRef = doc(db, "users", userId);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) return null;
+
+  return docSnap.data() as UserDocument;
+}
+
+/**
+ * Update user profile document
+ */
+export async function updateUserProfile(
+  userId: string,
+  updates: Partial<UserDocument>
+): Promise<void> {
+  const docRef = doc(db, "users", userId);
+  await setDoc(docRef, updates, { merge: true });
 }
 
 /**
@@ -227,6 +258,17 @@ export async function saveAnalysisToFirestore(
 export async function deleteAnalysis(analysisId: string): Promise<void> {
   const docRef = doc(db, "analyses", analysisId);
   await deleteDoc(docRef);
+}
+
+/**
+ * Save advisor plan output to an analysis document
+ */
+export async function updateAnalysisAdvisorPlan(
+  analysisId: string,
+  advisorPlan: AdvisorPlan
+): Promise<void> {
+  const docRef = doc(db, "analyses", analysisId);
+  await setDoc(docRef, { advisorPlan }, { merge: true });
 }
 
 // Export Firebase instances for direct use if needed

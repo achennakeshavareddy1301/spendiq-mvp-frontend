@@ -77,6 +77,29 @@ export interface AnalysisResult {
   suggestions: string[];
 }
 
+export interface AdvisorPlan {
+  sipRecommendation: {
+    amount: number;
+    rationale: string;
+  };
+  savingsAdvice: string[];
+  taxSuggestions: string[];
+  riskProfile: {
+    label: "Conservative" | "Moderate" | "Aggressive";
+    rationale: string;
+  };
+  portfolioSuggestions: string[];
+  actionItems: string[];
+}
+
+export type PortfolioAssetType = "mf" | "stock" | "etf" | "other";
+
+export interface PortfolioSnapshotItem {
+  name: string;
+  type: PortfolioAssetType;
+  amount: number;
+}
+
 /**
  * Analysis status enum
  */
@@ -95,6 +118,7 @@ export interface AnalysisDocument {
   transactionCount: number;
   transactions?: Transaction[]; // Raw transactions for AI chat
   result?: AnalysisResult | null;
+  advisorPlan?: AdvisorPlan | null;
   error?: string | null;
 }
 
@@ -104,6 +128,9 @@ export interface AnalysisDocument {
 export interface UserDocument {
   email: string;
   displayName: string | null;
+  age?: number | null;
+  monthlyIncome?: number | null;
+  portfolioSnapshot?: PortfolioSnapshotItem[] | null;
   createdAt: Date | string;
 }
 

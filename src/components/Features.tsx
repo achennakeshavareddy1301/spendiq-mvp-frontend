@@ -1,26 +1,61 @@
-import { Wallet, Brain, Lightbulb, MessageCircle } from "lucide-react";
+import {
+  Wallet,
+  Brain,
+  Lightbulb,
+  MessageCircle,
+  Gauge,
+  Target,
+  ShieldCheck,
+  FileText,
+  PieChart
+} from "lucide-react";
 
 const Features = () => {
   const features = [
     {
       icon: Wallet,
       title: "UPI-native intelligence",
-      description: "Built specifically for Indian UPI transaction patterns. We understand the nuances of your digital payments.",
+      description: "Built specifically for Indian UPI patterns with smart merchant recognition.",
     },
     {
       icon: Brain,
       title: "AI-driven categorization",
-      description: "Automatically tags expenses and income with high accuracy. No manual sorting required.",
+      description: "Auto-tags spends and income with high accuracy so you skip manual sorting.",
     },
     {
-      icon: Lightbulb,
-      title: "Actionable insights, not just charts",
-      description: "Not just data visualization. Real money decisions backed by intelligent analysis.",
+      icon: Gauge,
+      title: "Money Health Score",
+      description: "Instantly know if your finances are Healthy, Average, or Risky.",
+    },
+    {
+      icon: Target,
+      title: "FIRE planning",
+      description: "Retirement corpus and SIP recommendations based on your real cash flow.",
     },
     {
       icon: MessageCircle,
-      title: "Chat with your money",
-      description: "Ask questions and get answers from your transactions. Your personal finance assistant.",
+      title: "AI financial mentor",
+      description: "Ask anything about savings, SIPs, taxes, or investments and get answers.",
+    },
+    {
+      icon: Lightbulb,
+      title: "Actionable insights",
+      description: "Specific, rupee-level recommendations instead of generic charts.",
+    },
+    {
+      icon: PieChart,
+      title: "Deep category analytics",
+      description: "Visualize spends by category, vendor, and month with smart trends.",
+    },
+    {
+      icon: FileText,
+      title: "Statement-ready reports",
+      description: "Download clean PDF reports to share or keep for your records.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Secure by design",
+      description: "Your data is protected with modern encryption and privacy-first defaults.",
     },
   ];
 
@@ -38,7 +73,7 @@ const Features = () => {
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
             <div
               key={index}

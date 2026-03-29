@@ -99,6 +99,23 @@ export async function fetchUserAnalyses(): Promise<AnalysesListResponse> {
 }
 
 /**
+ * Analyze financials using server-side AI advisor
+ */
+export async function analyzeFinancials(payload: unknown): Promise<unknown> {
+  const response = await authFetch("/analyzeFinancials", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Failed to analyze financials" }));
+    throw new Error(error.error || `Analyze financials failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Convert a File to base64 string
  */
 function fileToBase64(file: File): Promise<string> {

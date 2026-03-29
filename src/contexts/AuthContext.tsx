@@ -3,15 +3,24 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "firebase/auth";
-import { onAuthChange, signIn, signUp, signOut } from "@/services/firebase";
+import { onAuthChange, signIn, signUp, signOut, fetchUserProfile, updateUserProfile } from "@/services/firebase";
+import type { UserDocument } from "@/types";
 
 interface AuthContextType {
   user: User | null;
+  profile: UserDocument | null;
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName?: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    displayName?: string,
+    age?: number,
+    monthlyIncome?: number
+  ) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<UserDocument>) => Promise<void>;
   clearError: () => void;
 }
 
@@ -23,6 +32,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +40,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const unsubscribe = onAuthChange((user) => {
       setUser(user);
-      setLoading(false);
+      if (!user) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      fetchUserProfile(user.uid)
+        .then((profileDoc) => setProfile(profileDoc))
+        .catch(() => setProfile(null))
+        .finally(() => setLoading(false));
     });
 
     return () => unsubscribe();
@@ -50,11 +69,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const register = async (email: string, password: string, displayName?: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    displayName?: string,
+    age?: number,
+    monthlyIncome?: number
+  ) => {
     try {
       setError(null);
       setLoading(true);
-      await signUp(email, password, displayName);
+      await signUp(email, password, displayName, age, monthlyIncome);
     } catch (err: any) {
       const message = getAuthErrorMessage(err.code);
       setError(message);
@@ -74,15 +99,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const updateProfile = async (updates: Partial<UserDocument>) => {
+    if (!user) return;
+
+    try {
+      setError(null);
+      await updateUserProfile(user.uid, updates);
+      const refreshed = await fetchUserProfile(user.uid);
+      setProfile(refreshed);
+    } catch (err: any) {
+      setError("Failed to update profile. Please try again.");
+      throw err;
+    }
+  };
+
   const clearError = () => setError(null);
 
   const value: AuthContextType = {
     user,
+    profile,
     loading,
     error,
     login,
     register,
     logout,
+    updateProfile,
     clearError,
   };
 
