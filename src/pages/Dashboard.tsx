@@ -34,7 +34,8 @@ import {
   Target,
   PlusCircle,
   Save,
-  XCircle
+  XCircle,
+  ScanLine
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToUserAnalyses, deleteAnalysis } from "@/services/firebase";
@@ -521,6 +522,36 @@ export default function Dashboard(): JSX.Element {
                   )}
                   Save Snapshot
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!selectedAnalysis && (
+          <Card className="bg-card/60 backdrop-blur-sm border-border mb-10">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between text-foreground">
+                MF Portfolio X-Ray
+                <Link to="/mf-xray">
+                  <Button variant="outline" size="sm">
+                    <ScanLine className="h-4 w-4 mr-2" />
+                    Upload CAMS/KFintech
+                  </Button>
+                </Link>
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Get XIRR, overlap detection, expense ratio drag, and rebalancing insights.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-border/60 bg-background/60 p-4 text-sm text-foreground">
+                Reconstructs your portfolio in seconds from statement text.
+              </div>
+              <div className="rounded-xl border border-border/60 bg-background/60 p-4 text-sm text-foreground">
+                Highlights overlapping holdings and redundant funds.
+              </div>
+              <div className="rounded-xl border border-border/60 bg-background/60 p-4 text-sm text-foreground">
+                Generates an AI rebalancing plan with clear next steps.
               </div>
             </CardContent>
           </Card>

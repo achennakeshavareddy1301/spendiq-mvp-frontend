@@ -159,3 +159,63 @@ export interface AdvisorPlan {
   portfolioSuggestions: string[];
   actionItems: string[];
 }
+
+export interface MFPortfolioHolding {
+  fundName: string;
+  category: string;
+  invested: number;
+  currentValue: number;
+  xirr: number;
+  expenseRatio: number;
+  topSectors: string[];
+}
+
+export interface MFOverlapPair {
+  fundA: string;
+  fundB: string;
+  overlapPercent: number;
+}
+
+export interface MFOverlapAnalysis {
+  duplicateHoldings: string[];
+  overlapPairs: MFOverlapPair[];
+}
+
+export interface MFBenchmarkComparison {
+  benchmark: string;
+  portfolioReturn: number;
+  benchmarkReturn: number;
+  alpha: number;
+  period: string;
+}
+
+export interface MFPortfolioSummary {
+  totalInvested: number;
+  currentValue: number;
+  xirr: number;
+  equityAllocation: number;
+  debtAllocation: number;
+  hybridAllocation: number;
+  expenseRatioDrag: number;
+  overlapScore: number;
+}
+
+export interface MFDataQuality {
+  confidence: "low" | "medium" | "high";
+  notes: string[];
+}
+
+export interface MFPortfolioReport {
+  portfolioSummary: MFPortfolioSummary;
+  holdings: MFPortfolioHolding[];
+  overlapAnalysis: MFOverlapAnalysis;
+  benchmarkComparison: MFBenchmarkComparison;
+  riskFlags: string[];
+  rebalancingPlan: string[];
+  dataQuality: MFDataQuality;
+}
+
+export interface AnalyzeMFPortfolioRequest {
+  fileName: string;
+  extractedText: string;
+}

@@ -254,3 +254,64 @@ RESPONSE RULES:
 - Do not use markdown or JSON in the reply.
 `;
 }
+
+export function buildMFPortfolioXRayPrompt(input: { extractedText: string }): string {
+  return `You are an Indian mutual fund portfolio analyst. You are given CAMS/KFintech statement text.
+
+STRICT RULES:
+1. Output ONLY valid JSON. No markdown, no code fences, no extra text.
+2. Use INR values as numbers. Use percentages as numbers (e.g., 12.4).
+3. If a value is missing, estimate it using reasonable assumptions and note it in dataQuality.notes.
+4. Ensure all arrays exist even if empty.
+
+REQUIRED OUTPUT JSON SCHEMA:
+{
+  "portfolioSummary": {
+    "totalInvested": 0,
+    "currentValue": 0,
+    "xirr": 0,
+    "equityAllocation": 0,
+    "debtAllocation": 0,
+    "hybridAllocation": 0,
+    "expenseRatioDrag": 0,
+    "overlapScore": 0
+  },
+  "holdings": [
+    {
+      "fundName": "",
+      "category": "",
+      "invested": 0,
+      "currentValue": 0,
+      "xirr": 0,
+      "expenseRatio": 0,
+      "topSectors": [""]
+    }
+  ],
+  "overlapAnalysis": {
+    "duplicateHoldings": [""],
+    "overlapPairs": [
+      { "fundA": "", "fundB": "", "overlapPercent": 0 }
+    ]
+  },
+  "benchmarkComparison": {
+    "benchmark": "NIFTY 50",
+    "portfolioReturn": 0,
+    "benchmarkReturn": 0,
+    "alpha": 0,
+    "period": "3Y"
+  },
+  "riskFlags": [""],
+  "rebalancingPlan": [""],
+  "dataQuality": {
+    "confidence": "medium",
+    "notes": [""]
+  }
+}
+
+STATEMENT TEXT:
+---
+${input.extractedText}
+---
+
+OUTPUT JSON ONLY:`;
+}

@@ -12,13 +12,16 @@ import {
   AnalysisResult, 
   AnalyzeUPIRequest,
   AnalysisDocument,
-  AnalyzeFinancialsRequest
+  AnalyzeFinancialsRequest,
+  AnalyzeMFPortfolioRequest,
+  MFPortfolioReport
 } from "./types";
 import {
   buildExtractionPrompt,
   buildAnalysisPrompt,
   buildFinancialAdvicePrompt,
-  buildAdvisorChatPrompt
+  buildAdvisorChatPrompt,
+  buildMFPortfolioXRayPrompt
 } from "./prompts";
 
 // Initialize Firebase Admin
@@ -451,6 +454,63 @@ export const analyzeFinancials = functions.https.onRequest((req, res) => {
       res.status(400).json({ success: false, error: "Invalid mode" });
     } catch (error: any) {
       functions.logger.error("analyzeFinancials error:", error);
+      res.status(error.code === "unauthenticated" ? 401 : 500).json({
+        success: false,
+        error: error.message || "Internal server error"
+      });
+    }
+  });
+});
+
+/**
+ * Analyze MF portfolio statement (CAMS/KFintech)
+ */
+export const analyzeMFPortfolio = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, async () => {
+    try {
+      if (req.method !== "POST") {
+        res.status(405).json({ success: false, error: "Method not allowed" });
+        return;
+      }
+
+      const decodedToken = await verifyAuth(req);
+      const userId = decodedToken.uid;
+
+      if (!GEMINI_API_KEY) {
+        functions.logger.error("Gemini API key not configured");
+        res.status(500).json({ success: false, error: "Server configuration error" });
+        return;
+      }
+
+      const body = req.body as AnalyzeMFPortfolioRequest;
+      if (!body || !body.fileName || !body.extractedText) {
+        res.status(400).json({ success: false, error: "Missing request payload" });
+        return;
+      }
+
+      if (body.extractedText.trim().length < 100) {
+        res.status(400).json({ success: false, error: "Statement text is too short" });
+        return;
+      }
+
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = buildMFPortfolioXRayPrompt({ extractedText: body.extractedText });
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+      const report = parseGeminiJson(responseText) as MFPortfolioReport;
+
+      await db.collection("mfReports").add({
+        userId,
+        fileName: body.fileName,
+        report,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({ success: true, report });
+    } catch (error: any) {
+      functions.logger.error("analyzeMFPortfolio error:", error);
       res.status(error.code === "unauthenticated" ? 401 : 500).json({
         success: false,
         error: error.message || "Internal server error"

@@ -116,6 +116,23 @@ export async function analyzeFinancials(payload: unknown): Promise<unknown> {
 }
 
 /**
+ * Analyze mutual fund portfolio statement (CAMS/KFintech) with AI
+ */
+export async function analyzeMFPortfolio(payload: unknown): Promise<unknown> {
+  const response = await authFetch("/analyzeMFPortfolio", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Failed to analyze MF portfolio" }));
+    throw new Error(error.error || `Analyze MF portfolio failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Convert a File to base64 string
  */
 function fileToBase64(file: File): Promise<string> {

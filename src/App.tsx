@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import UPIAnalysisPage from "./pages/UPIAnalysis";
+import MFXRayPage from "./pages/MFXRay";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             {/* Protected routes - auth check is done inside the components */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/upi" element={<UPIAnalysisPage />} />
+            <Route path="/mf-xray" element={<MFXRayPage />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
